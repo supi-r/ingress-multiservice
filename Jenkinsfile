@@ -1,35 +1,68 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    DOCKER_USER = "supriya242"
-  }
-
-  stages {
-    stage('Build App1 Image') {
-      steps {
-        sh 'docker build -t $DOCKER_USER/app1:latest app1/'
-        sh 'docker push $DOCKER_USER/app1:latest'
-      }
+    environment {
+        APP1_IMAGE = "supriya242/app1:latest"
+        APP2_IMAGE = "supriya242/app2:latest"
     }
 
-    stage('Build App2 Image') {
-      steps {
-        sh 'docker build -t $DOCKER_USER/app2:latest app2/'
-        sh 'docker push $DOCKER_USER/app2:latest'
-      }
+    stages {
+
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/supriya242/ingress-multiservice'
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                      echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    '''
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                sh '''
+                  docker build -t $APP1_IMAGE ./app1
+                  docker build -t $APP2_IMAGE ./app2
+                '''
+            }
+        }
+
+        stage('Push Docker Images') {
+            steps {
+                sh '''
+                  docker push $APP1_IMAGE
+                  docker push $APP2_IMAGE
+                '''
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh '''
+                  kubectl apply -f k8s/
+                '''
+            }
+        }
     }
 
-    stage('Deploy to Kubernetes') {
-      steps {
-        sh '''
-          kubectl apply -f k8s/
-          kubectl rollout status deployment/app1-deployment
-          kubectl rollout status deployment/app2-deployment
-        '''
-      }
+    post {
+        success {
+            echo "✅ Deployment completed successfully"
+        }
+        failure {
+            echo "❌ Deployment failed"
+        }
     }
-  }
 }
-
 
