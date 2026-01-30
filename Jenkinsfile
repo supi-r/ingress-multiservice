@@ -11,7 +11,7 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/supriya242/ingress-multiservice'
+                    url: 'https://github.com/supi-r/ingress-multiservice'
             }
         }
 
