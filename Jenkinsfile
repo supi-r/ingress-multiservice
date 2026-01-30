@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        APP1_IMAGE = "supriya242/app1:latest"
-        APP2_IMAGE = "supriya242/app2:latest"
+        DOCKER_APP1_IMAGE = "supriya242/app1:latest"
+        DOCKER_APP2_IMAGE = "supriya242/app2:latest"
     }
 
     stages {
@@ -32,8 +32,8 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 sh '''
-                  docker build -t $APP1_IMAGE ./app1
-                  docker build -t $APP2_IMAGE ./app2
+                  docker build -t $DOCKER_APP1_IMAGE ./app1
+                  docker build -t $DOCKER_APP2_IMAGE ./app2
                 '''
             }
         }
@@ -41,28 +41,34 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 sh '''
-                  docker push $APP1_IMAGE
-                  docker push $APP2_IMAGE
+                  docker push $DOCKER_APP1_IMAGE
+                  docker push $DOCKER_APP2_IMAGE
                 '''
             }
         }
 
         stage('Deploy to Kubernetes') {
-    steps {
-        withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-            sh '''
-              kubectl apply -f k8s/
-            '''
+            steps {
+                withCredentials([file(
+                    credentialsId: 'kubeconfig',
+                    variable: 'KUBECONFIG'
+                )]) {
+                    sh '''
+                      kubectl apply -f k8s/
+                      kubectl rollout status deployment/app1
+                      kubectl rollout status deployment/app2
+                    '''
+                }
+            }
         }
     }
-}
 
     post {
         success {
-            echo "✅ Deployment completed successfully"
+            echo "✅ CI/CD Pipeline completed successfully"
         }
         failure {
-            echo "❌ Deployment failed"
+            echo "❌ Pipeline failed. Check logs."
         }
     }
 }
