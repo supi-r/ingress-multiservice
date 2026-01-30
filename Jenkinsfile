@@ -47,12 +47,12 @@ pipeline {
             }
         }
 
+
         stage('Deploy to Kubernetes') {
-            steps {
-                withCredentials([file(
-                    credentialsId: 'kubeconfig',
-                    variable: 'KUBECONFIG'
-                )]) {
+               environment {
+        KUBECONFIG = "/var/lib/jenkins/.kube/config"
+    }
+    steps {
                     sh '''
                       kubectl apply -f k8s/
                       kubectl rollout status deployment/app1
